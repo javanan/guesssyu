@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+
+
+	<!-- 采用扫描 + 注解的方式进行开发 可以提高开发效率，后期维护变的困难了，可读性变差了 -->
+	<!-- 自动加载构建bean -->
+	<context:component-scan base-package="com.guessyu" />
+	<!-- 支持aop注解 -->
+	<aop:aspectj-autoproxy />
+
+
+
+	<!-- destroy-method="close"的作用是当数据库连接不使用的时候，就把该连接重新放到数据池中，方便下次使用调用 -->
+
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver">
+		</property>
+		<property name="url"
+			value="jdbc:mysql://localhost:3306/guesssyu?useUnicode=true&amp;autoReconnect=true&amp;rewriteBatchedStatements=TRUE">
+		</property>
+		<property name="username" value="root"></property>
+		<property name="password" value="root"></property>
+	</bean>
+
+	<!-- session工厂 -->
+	<!-- 将Hibernate中的事物交给Spring进行接管 -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+		<!-- 指定sessiongFactory中的数据源 -->
+		<property name="dataSource" ref="dataSource" />
+		<!-- 指定hibernate的配置件 -->
+		<property name="hibernateProperties">
+			<props>
+				<!-- key的名字前面都要加hibernate. -->
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.MySQL5Dialect
+				</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.format_sql">true</prop>
+				<prop key="hibernate.cache.use_second_level_cache">true</prop>
+				<prop key="hibernate.cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory
+				</prop>
+				<prop key="hibernate.cache.use_query_cache">true</prop>
+			</props>
+		</property>
+		<!-- 自动扫描注解方式配置的hibernate类文件 -->
+		<property name="packagesToScan">
+			<list>
+				<value>com.guessyu.entity</value>
+			</list>
+		</property>
+	</bean>
+
+
+
+	<!-- 配置使用基于Hibernate的事务管理器 -->
+	<bean id="txMandager"
+		class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+		<!-- spring需要通过sessionFactory来开启事务 -->
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+
+	<!--Spring中的事物配置声明.1 基于xml 配置方式 2.基于注解来声明那些类 -->
+	<tx:annotation-driven transaction-manager="txMandager" />
+
+
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate5.HibernateTemplate">
+		<property name="sessionFactory" ref="sessionFactory" />
+		<property name="cacheQueries">
+			<value>true</value>
+		</property>
+	</bean>
+	<!--配置一个JdbcTemplate实例 -->
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+</beans>  
